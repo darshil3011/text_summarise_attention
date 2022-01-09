@@ -1,4 +1,4 @@
-# text_summarise_attention
+# Abstractive Text summarization using Encoder-Decoder with Attention
 Abstractive text summarization using encoder-decoder model with attention layer
 
 Dataset used: Kaggle - https://www.kaggle.com/snap/amazon-fine-food-reviews
