@@ -10,4 +10,5 @@ This code consists of Encoder-Decoder based transformer model for predicting abs
 References that helped in implementing this algorithm: 
 
 Jaemin Cho's tutorial - https://github.com/j-min/tf_tutorial_plus/tree/master/RNN_seq2seq/contrib_seq2seq
+
 Xin Pan's and Peter Liu's GitHub page - https://github.com/tensorflow/models/tree/master/textsum
