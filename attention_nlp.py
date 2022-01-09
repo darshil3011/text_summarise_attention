@@ -38,15 +38,15 @@ def load_data(file_path):
     
 def transform(text):
 
-    new_text = text.lower() 
-    new_text = re.sub(r'\([^)]*\)', '', new_text) 
-    new_text = re.sub('"','', new_text) 
-    new_text = ' '.join([contraction_mapping[t] if t in contraction_mapping else t for t in new_text.split(" ")]) 
-    new_text = re.sub(r"'s\b","",new_text) 
-    new_text = re.sub("[^a-zA-Z]", " ", new_text) 
-    new_text = ' '.join([word for word in new_text.split() if word not in StopWords]) 
+    transformed_text = text.lower() #convert lowercase
+    transformed_text = re.sub(r'\([^)]*\)', '', transformed_text) #removing punctuations and symbols 
+    transformed_text = re.sub('"','', transformed_text) #removing " and replacing with space
+    transformed_text = ' '.join([contraction_mapping[t] if t in contraction_mapping else t for t in transformed_text.split(" ")]) #replacing contractions based on above dict
+    transformed_text = re.sub(r"'s\b","",transformed_text) #removing apostrophe
+    transformed_text = re.sub("[^a-zA-Z]", " ", transformed_text) #removing non-alphabetic characters
+    transformed_text = ' '.join([word for word in transformed_text.split() if word not in StopWords]) #removing stopwords 
 
-    return new_text
+    return transformed_text
 
     
 
@@ -55,28 +55,30 @@ def preprocess(data):
     text_cleaned = []
     summ_cleaned = []
 
+    #creating dataframes for seperating news-text and headlines
     for text in data['text']:
         text_cleaned.append(preprocess(text))
     for summary in data['headlines']:
         summ_cleaned.append(preprocess(summary))
-    clean_df = pd.DataFrame()
-    clean_df['text'] = text_cleaned
-    clean_df['headline'] = summ_cleaned
+    preprocess_df = pd.DataFrame()
+    preprocess_df['text'] = text_cleaned
+    preprocess_df['headline'] = summ_cleaned
 
-    #Replacing empty string summaries with nan values and then dropping those datapoints.
-    clean_df['headline'].replace('', np.nan, inplace=True)
-    clean_df.dropna(axis=0, inplace=True)
+    #Replacing empty data with nan values 
+    preprocess_df['headline'].replace('', np.nan, inplace=True)
+    #Drop nan values
+    preprocess_df.dropna(axis=0, inplace=True)
 
-    #Adding START and END tokens to summaries for later use.
-    clean_df['headline'] = clean_df['headline'].apply(lambda x: '<START>' + ' '+ x + ' '+ '<END>')
+    #Adding START and END tokens 
+    preprocess_df['headline'] = preprocess_df['headline'].apply(lambda x: '<START>' + ' '+ x + ' '+ '<END>')
 
-
-    max_len_news = max([len(text.split()) for text in clean_df['text']])
-    max_len_headline = max([len(text.split()) for text in clean_df['headline']])
+    #Finding max length of news and headlines to decide length of decoding sequence
+    max_len_news = max([len(text.split()) for text in preprocess_df['text']])
+    max_len_headline = max([len(text.split()) for text in preprocess_df['headline']])
     print(max_len_news, max_len_headline)
-    print(clean_df.head(5))
+    print(preprocess_df.head(5))
     
-    return clean_df, max_len_news, max_len_headline
+    return preprocess_df, max_len_news, max_len_headline
     
     
 def tokenize(clean_df, max_len_news, max_len_headline):
@@ -305,15 +307,16 @@ def decoded_sequence(input_seq):
 
 if __name__ == "__main__":
     
+    #Load data, preprocess and train model
     review = load_data(file_path)
     clean_df, max_len_news, max_len_headline = preprocess(review)
     x_train_pad,  x_test_pad, y_train_pad, y_test_pad, news_vocab, headline_vocab = tokenize (clean_df, max_len_news, max_len_headline)
     model = model_train(x_train_pad,  x_test_pad, y_train_pad, y_test_pad, news_vocab, headline_vocab)
 
-    
+    #Initalise state vectors for encoder
     encoder_model = Model(inputs=encoder_input, outputs=[encoder_output, a_enc, c_enc])
 
-    #Initialising state vectors for decoder.
+    #Initialise state vectors for decoder.
     decoder_initial_state_a = Input(shape=(latent_dim,))
     decoder_initial_state_c = Input(shape=(latent_dim,))
     decoder_hidden_state = Input(shape=(max_len_news, latent_dim))
@@ -326,7 +329,8 @@ if __name__ == "__main__":
     decoder_final = decoder_dense(decoder_inf_concat)
     decoder_model = Model([decoder_input]+[decoder_hidden_state, decoder_initial_state_a, decoder_initial_state_c], [decoder_final]+[decoder_a, decoder_c])
 
-
+    
+    #prediction
     i = 30
     print('News:', X_train.iloc[i])
     print('Actual Headline:', y_train.iloc[i])
